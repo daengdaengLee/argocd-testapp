@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applicationset-test
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - app: nonexistent-1
+            deploy: helm
+          - app: nonexistent-2
+  template:
+    metadata:
+      name: "applicationset-test-{{.app}}"
+    spec:
+      project: "default"
+      source:
+        repoURL: "https://redacted/redacted.git"
+        path: "apps/{{.app}}/overlays/test"
+        targetRevision: HEAD
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "default"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+  templatePatch: |
+    spec:
+      source:
+        {{- if (eq (or .deploy "kustomize") "helm") }}
+        plugin:
+          name: kustomize-build-with-helm
+        {{- end }}
